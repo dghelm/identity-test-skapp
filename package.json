@@ -4,6 +4,9 @@
   "description": "",
   "private": true,
   "scripts": {
+    "build": "rimraf dist && tsc --project tsconfig.build.json && npx webpack",
+    "lint:eslint": "eslint --ext .ts src",
+    "lint:tsc": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -16,12 +19,38 @@
     "url": "https://github.com/m-cat/identity-test-skapp/issues"
   },
   "homepage": "https://github.com/m-cat/identity-test-skapp#readme",
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --ext .ts --fix",
+      "tsc --esModuleInterop --noemit",
+      "prettier --write"
+    ],
+    "*.{json,yml,md}": [
+      "prettier --write"
+    ]
+  },
   "devDependencies": {
+    "@types/node-forge": "^0.9.7",
+    "@typescript-eslint/eslint-plugin": "^4.3.0",
+    "@typescript-eslint/parser": "^4.3.0",
+    "eslint": "^7.11.0",
+    "eslint-plugin-compat": "^3.8.0",
+    "eslint-plugin-jsdoc": "^31.0.7",
+    "husky": "^4.3.8",
+    "lint-staged": "^10.5.3",
+    "prettier": "^2.2.1",
+    "rimraf": "^3.0.2",
+    "typescript": "^4.1.3",
     "webpack": "^5.16.0",
     "webpack-cli": "^4.4.0"
   },
   "dependencies": {
-    "postmate": "^1.5.2",
-    "skynet-js": "^2.9.0"
+    "penpal": "^5.3.0",
+    "skynet-js": "^3.0.0"
   }
 }
