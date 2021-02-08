@@ -1,4 +1,17 @@
 import { connectToChild } from "penpal";
+import { Connection } from "penpal/lib/types";
+
+import { createIframe } from "./utils";
+
+export class SkappInfo {
+  name: string;
+  url: string;
+
+  constructor(name: string) {
+    this.name = name;
+    this.url = location.hostname;
+  }
+}
 
 export type ProviderInfo = {
   providerInterface: Record<string, Array<string>>;
@@ -10,38 +23,30 @@ export type ProviderInfo = {
 export class Gate {
   providerInfo: ProviderInfo;
 
-  private bridgeHandshake;
+  private bridgeConnection: Connection;
 
-  constructor(bridgeUrl: string) {
+  /**
+   * Load a bridge, returning the gate to the bridge.
+   */
+  static async loadBridge(bridgeUrl: string, skappInfo: SkappInfo): Promise<Gate> {
     if (typeof Storage == "undefined") {
       throw new Error("Browser does not support web storage");
     }
 
     // Create the iframe.
-
-    const childFrame = document.createElement("iframe")!;
-    childFrame.src = bridgeUrl;
-    childFrame.style.display = "none";
-    // Add the frame to the page.
-    if (document.readyState === "complete" || document.readyState === "interactive") {
-      document.body.appendChild(childFrame);
-    } else {
-      document.addEventListener("DOMContentLoaded", () => {
-        document.body.appendChild(childFrame);
-      });
-    }
+    const childFrame = createIframe(bridgeUrl);
 
     // Connect to the iframe.
-
     const connection = connectToChild({
       iframe: childFrame,
       timeout: 5_000,
     });
 
-    this.bridgeHandshake = connection.promise;
-    // TODO: Update interface whenever child updates provider info (child should send event)
-    // Should more generally update ALL provider info?
-    // this.providerInterface = this.getInterface();
+    const gate = new Gate;
+    gate.bridgeConnection = connection;
+
+    return gate.bridgeConnection.promise
+      .then((child) => child.setSkappInfo(skappInfo));
   }
 
   async callInterface(method: string): Promise<unknown> {
@@ -49,12 +54,12 @@ export class Gate {
       throw new Error(`interface does not have method '${method}'`);
     }
 
-    return this.bridgeHandshake.then(async (child) => child.callInterface(method));
+    return this.bridgeConnection.promise.then(async (child) => child.callInterface(method));
   }
 
   // TODO: Verify return value from child has correct fields.
   async connectProvider(): Promise<ProviderInfo> {
-    return this.bridgeHandshake
+    return this.bridgeConnection.promise
       .then(async (child) => child.connectProvider())
       .then((info: ProviderInfo) => {
         this.providerInfo = info;
@@ -63,7 +68,7 @@ export class Gate {
   }
 
   async disconnectProvider(): Promise<ProviderInfo> {
-    return this.bridgeHandshake
+    return this.bridgeConnection.promise
       .then(async (child) => child.disconnectProvider())
       .then((info: ProviderInfo) => {
         this.providerInfo = info;
@@ -72,7 +77,7 @@ export class Gate {
   }
 
   async fetchStoredProvider(): Promise<ProviderInfo> {
-    return this.bridgeHandshake
+    return this.bridgeConnection.promise
       .then(async (child) => child.fetchStoredProvider())
       .then((info: ProviderInfo) => {
         this.providerInfo = info;
@@ -81,7 +86,7 @@ export class Gate {
   }
 
   async getProviderInfo(): Promise<ProviderInfo> {
-    return this.bridgeHandshake
+    return this.bridgeConnection.promise
       .then(async (child) => child.getProviderInfo())
       .then((info: ProviderInfo) => {
         this.providerInfo = info;
@@ -89,16 +94,24 @@ export class Gate {
       });
   }
 
-  async loadProvider(): Promise<ProviderInfo> {
-    return this.bridgeHandshake
-      .then(async (child) => child.loadProvider())
+  async loadNewProvider(): Promise<ProviderInfo> {
+    return this.bridgeConnection.promise
+      .then(async (child) => child.loadNewProvider())
       .then((info: ProviderInfo) => {
         this.providerInfo = info;
         return info;
       });
   }
 
+  /**
+   * Set the skapp info for subsequent bridge calls.
+   */
+  async setSkappInfo(): Promise<void> {
+    return this.bridgeConnection.promise
+      .then(async (child) => child.setSkappInfo());
+  }
+
   async unloadProvider(): Promise<void> {
-    return this.bridgeHandshake.then(async (child) => child.unloadProvider());
+    return this.bridgeConnection.promise.then(async (child) => child.unloadProvider());
   }
 }
