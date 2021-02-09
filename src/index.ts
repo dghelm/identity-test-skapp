@@ -17,6 +17,7 @@ let bridgeSkylink = "https://siasky.net/CACZSMGLHkCKzd-4KyX209SqgQaz9UpWc7fuNu7Q
 bridgeSkylink = client.getSkylinkUrl(bridgeSkylink, { subdomain: true });
 console.log(bridgeSkylink);
 
+// TODO: Should include a session token as well, so that other skapps can't impersonate this one.
 const skappInfo = new SkappInfo(skappName);
 
 // Initialize the identity state.

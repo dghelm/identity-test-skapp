@@ -3,22 +3,27 @@ import { Connection } from "penpal/lib/types";
 
 import { createIframe } from "./utils";
 
-export class SkappInfo {
-  name: string;
-  url: string;
-
-  constructor(name: string) {
-    this.name = name;
-    this.url = location.hostname;
-  }
-}
-
 export type ProviderInfo = {
   providerInterface: Record<string, Array<string>>;
   isProviderConnected: boolean;
   isProviderLoaded: boolean;
-  providerName: string;
+  metadata: ProviderMetadata;
 };
+
+type ProviderMetadata = {
+  name: string;
+  domain: string;
+};
+
+export class SkappInfo {
+  name: string;
+  domain: string;
+
+  constructor(name: string) {
+    this.name = name;
+    this.domain = location.hostname;
+  }
+}
 
 export class Gate {
   providerInfo: ProviderInfo;
