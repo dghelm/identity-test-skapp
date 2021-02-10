@@ -1,9 +1,10 @@
 // TODO: Error-checking on bridge calls.
 
-import { gate } from "./index";
+import { gate, skappInfo } from "./index";
 import {
   activateUI,
   deactivateUI,
+  setUIStateBridgeError,
   setUIStateConnected,
   setUIStateFetching,
   setUIStateLoaded,
@@ -19,7 +20,7 @@ export async function connectProvider(): Promise<void> {
   deactivateUI();
 
   return gate
-    .connectProvider()
+    .connectProvider(skappInfo)
     .then(async (info) => changeSkappState(info))
     .then(() => activateUI());
 }
@@ -37,22 +38,31 @@ export async function disconnectProvider(): Promise<void> {
 }
 
 /**
- *
+ * Fetches the stored provider and if found, tries to connect.
  */
 export async function fetchStoredProvider(): Promise<void> {
   setUIStateFetching();
 
-  return gate.fetchStoredProvider().then(async (info) => changeSkappState(info));
+  // TODO: remove, testing fetching screen
+  await new Promise(resolve => setTimeout(resolve, 1000));
+
+  return gate
+    .fetchStoredProvider(skappInfo)
+    .then(async (info) => changeSkappState(info))
+    .catch((error) => {
+      setUIStateBridgeError();
+      console.log(error);
+    });
 }
 
 /**
- *
+ * Loads a new provider, asking the router for the provider first.
  */
 export async function loadNewProvider(): Promise<void> {
   deactivateUI();
 
   return gate
-    .loadProvider()
+    .loadNewProvider(skappInfo)
     .then(async (info) => changeSkappState(info))
     .then(() => activateUI());
 }
@@ -63,12 +73,16 @@ export async function loadNewProvider(): Promise<void> {
  * @param providerInfo - The provider info.
  */
 async function changeSkappState(providerInfo: ProviderInfo): Promise<void> {
-  console.log(providerInfo);
   const { isProviderConnected, isProviderLoaded } = providerInfo;
 
   if (isProviderLoaded) {
     if (isProviderConnected) {
-      return gate.callInterface("identity").then((identity: string) => setUIStateConnected(providerInfo, identity));
+      return gate.callInterface("identity").then((identity: unknown) => {
+        if (typeof identity !== "string") {
+          throw new Error("returned identity is not a string");
+        }
+        setUIStateConnected(providerInfo, identity);
+      });
     } else {
       setUIStateLoaded(providerInfo);
     }

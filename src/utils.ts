@@ -14,5 +14,5 @@ export function createIframe(src: string) {
     });
   }
 
-  return childFrame
+  return childFrame;
 }

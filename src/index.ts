@@ -6,25 +6,25 @@ import { SkynetClient } from "skynet-js";
 import { Gate, SkappInfo } from "./gate";
 import { connectProvider, disconnectProvider, fetchStoredProvider, loadNewProvider } from "./login";
 
-export let gate: Gate;
-
 const skappName = "identity-test-skapp";
 const dev = true;
+let bridgeSkylink = "https://siasky.net/bAAQTne0foHBy5-HvLCIvPnetEnOjjabDyNoutgoTHZqaQ";
+
+// TODO: Should include a session token as well, so that other skapps can't impersonate this one.
+export const skappInfo = new SkappInfo(skappName);
 
 const client = dev ? new SkynetClient("https://siasky.net") : new SkynetClient();
 
-let bridgeSkylink = "https://siasky.net/CACZSMGLHkCKzd-4KyX209SqgQaz9UpWc7fuNu7QE2cFGA";
 bridgeSkylink = client.getSkylinkUrl(bridgeSkylink, { subdomain: true });
-console.log(bridgeSkylink);
+console.log(`Bridge skylink: ${bridgeSkylink}`);
 
-// TODO: Should include a session token as well, so that other skapps can't impersonate this one.
-const skappInfo = new SkappInfo(skappName);
+export const gate = new Gate(bridgeSkylink);
 
 // Initialize the identity state.
 
 (async () => {
   // Wait for the bridge to be loaded.
-  gate = await Gate.loadBridge(bridgeSkylink, skappInfo);
+  await gate.bridgeConnection.promise;
 
   fetchStoredProvider();
 })().catch((e) => {
@@ -37,6 +37,7 @@ const skappInfo = new SkappInfo(skappName);
 
 // Define button click functions.
 
+(window as any).bridgeRestart = fetchStoredProvider;
 (window as any).changeProvider = loadNewProvider;
 (window as any).loginLoaded = connectProvider;
 (window as any).loginNotLoaded = loadNewProvider;

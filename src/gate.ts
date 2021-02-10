@@ -3,11 +3,20 @@ import { Connection } from "penpal/lib/types";
 
 import { createIframe } from "./utils";
 
+type Interface = Record<string, Array<string>>;
+
 export type ProviderInfo = {
-  providerInterface: Record<string, Array<string>>;
+  providerInterface: Interface | null;
   isProviderConnected: boolean;
   isProviderLoaded: boolean;
-  metadata: ProviderMetadata;
+  metadata: ProviderMetadata | null;
+};
+
+const emptyProviderInfo = {
+  providerInterface: null,
+  isProviderConnected: false,
+  isProviderLoaded: false,
+  metadata: null,
 };
 
 type ProviderMetadata = {
@@ -28,15 +37,19 @@ export class SkappInfo {
 export class Gate {
   providerInfo: ProviderInfo;
 
-  private bridgeConnection: Connection;
+  bridgeConnection: Connection;
 
-  /**
-   * Load a bridge, returning the gate to the bridge.
-   */
-  static async loadBridge(bridgeUrl: string, skappInfo: SkappInfo): Promise<Gate> {
+  // ===========
+  // Constructor
+  // ===========
+
+  constructor(bridgeUrl: string) {
     if (typeof Storage == "undefined") {
       throw new Error("Browser does not support web storage");
     }
+
+    // Initialize state.
+    this.providerInfo = emptyProviderInfo;
 
     // Create the iframe.
     const childFrame = createIframe(bridgeUrl);
@@ -47,12 +60,12 @@ export class Gate {
       timeout: 5_000,
     });
 
-    const gate = new Gate;
-    gate.bridgeConnection = connection;
-
-    return gate.bridgeConnection.promise
-      .then((child) => child.setSkappInfo(skappInfo));
+    this.bridgeConnection = connection;
   }
+
+  // ===============
+  // Public Gate API
+  // ===============
 
   async callInterface(method: string): Promise<unknown> {
     if (!Object.prototype.hasOwnProperty.call(this.providerInfo, method)) {
@@ -63,9 +76,9 @@ export class Gate {
   }
 
   // TODO: Verify return value from child has correct fields.
-  async connectProvider(): Promise<ProviderInfo> {
+  async connectProvider(skappInfo: SkappInfo): Promise<ProviderInfo> {
     return this.bridgeConnection.promise
-      .then(async (child) => child.connectProvider())
+      .then(async (child) => child.connectProvider(skappInfo))
       .then((info: ProviderInfo) => {
         this.providerInfo = info;
         return info;
@@ -81,9 +94,9 @@ export class Gate {
       });
   }
 
-  async fetchStoredProvider(): Promise<ProviderInfo> {
+  async fetchStoredProvider(skappInfo: SkappInfo): Promise<ProviderInfo> {
     return this.bridgeConnection.promise
-      .then(async (child) => child.fetchStoredProvider())
+      .then(async (child) => child.fetchStoredProvider(skappInfo))
       .then((info: ProviderInfo) => {
         this.providerInfo = info;
         return info;
@@ -99,21 +112,13 @@ export class Gate {
       });
   }
 
-  async loadNewProvider(): Promise<ProviderInfo> {
+  async loadNewProvider(skappInfo: SkappInfo): Promise<ProviderInfo> {
     return this.bridgeConnection.promise
-      .then(async (child) => child.loadNewProvider())
+      .then(async (child) => child.loadNewProvider(skappInfo))
       .then((info: ProviderInfo) => {
         this.providerInfo = info;
         return info;
       });
-  }
-
-  /**
-   * Set the skapp info for subsequent bridge calls.
-   */
-  async setSkappInfo(): Promise<void> {
-    return this.bridgeConnection.promise
-      .then(async (child) => child.setSkappInfo());
   }
 
   async unloadProvider(): Promise<void> {

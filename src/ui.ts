@@ -1,5 +1,6 @@
 import type { ProviderInfo } from "./gate";
 
+const uiIdentityBridgeError = document.getElementById("identity-bridge-error");
 const uiIdentityConnected = document.getElementById("identity-connected");
 const uiIdentityFetching = document.getElementById("identity-fetching");
 const uiIdentityLoaded = document.getElementById("identity-loaded");
@@ -19,12 +20,12 @@ export function deactivateUI() {
   document.getElementById("darkLayer")!.style.display = "";
 }
 
-// TODO
 /**
  * Set the UI state to indicate that the bridge could not be loaded.
  */
 export function setUIStateBridgeError() {
-  throw new Error("not implemented");
+  setAllIdentityContainersInvisible();
+  uiIdentityBridgeError!.style.display = "block";
 }
 
 /**
@@ -32,11 +33,15 @@ export function setUIStateBridgeError() {
  * @param identity
  */
 export function setUIStateConnected(providerInfo: ProviderInfo, identity: string) {
+  if (!providerInfo.metadata) {
+    throw new Error("logic bug");
+  }
+
   setAllIdentityContainersInvisible();
   uiIdentityConnected!.style.display = "block";
 
   document.getElementById("identity-connected-identity")!.textContent = identity;
-  document.getElementById("identity-connected-provider")!.textContent = providerInfo.providerName;
+  document.getElementById("identity-connected-provider")!.textContent = providerInfo.metadata.name;
 }
 
 /**
@@ -51,10 +56,14 @@ export function setUIStateFetching() {
  * @param providerInfo
  */
 export function setUIStateLoaded(providerInfo: ProviderInfo) {
+  if (!providerInfo.metadata) {
+    throw new Error("logic bug");
+  }
+
   setAllIdentityContainersInvisible();
   uiIdentityLoaded!.style.display = "block";
 
-  document.getElementById("identity-loaded-provider")!.textContent = providerInfo.providerName;
+  document.getElementById("identity-loaded-provider")!.textContent = providerInfo.metadata.name;
 }
 
 /**
@@ -69,6 +78,9 @@ export function setUIStateNotLoaded() {
  *
  */
 function setAllIdentityContainersInvisible() {
-  uiIdentityFetching!.style.display = "none";
+  uiIdentityBridgeError!.style.display = "none";
   uiIdentityConnected!.style.display = "none";
+  uiIdentityFetching!.style.display = "none";
+  uiIdentityLoaded!.style.display = "none";
+  uiIdentityNotLoaded!.style.display = "none";
 }
