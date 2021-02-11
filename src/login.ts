@@ -11,7 +11,12 @@ import {
   setUIStateNotLoaded,
 } from "./ui";
 
-import type { ProviderInfo } from "./gate";
+import { ProviderInfo } from "./gate";
+
+export async function bridgeRestart(): Promise<void> {
+  gate.restartBridge();
+  return fetchStoredProvider();
+}
 
 /**
  * Connects to the currently loaded provider.
@@ -43,16 +48,18 @@ export async function disconnectProvider(): Promise<void> {
 export async function fetchStoredProvider(): Promise<void> {
   setUIStateFetching();
 
+  await gate.bridgeConnection.promise
+    .catch((error) => {
+      setUIStateBridgeError();
+      console.log(error);
+    });
+
   // TODO: remove, testing fetching screen
   await new Promise(resolve => setTimeout(resolve, 1000));
 
   return gate
     .fetchStoredProvider(skappInfo)
     .then(async (info) => changeSkappState(info))
-    .catch((error) => {
-      setUIStateBridgeError();
-      console.log(error);
-    });
 }
 
 /**
@@ -77,12 +84,19 @@ async function changeSkappState(providerInfo: ProviderInfo): Promise<void> {
 
   if (isProviderLoaded) {
     if (isProviderConnected) {
-      return gate.callInterface("identity").then((identity: unknown) => {
+      let identity;
+      try {
+        identity = await gate.callInterface("identity");
         if (typeof identity !== "string") {
           throw new Error("returned identity is not a string");
         }
+
         setUIStateConnected(providerInfo, identity);
-      });
+      } catch (error) {
+        console.log(error);
+        // TODO: Cleanup connection status.
+        setUIStateLoaded(providerInfo);
+      }
     } else {
       setUIStateLoaded(providerInfo);
     }
