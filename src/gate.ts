@@ -153,7 +153,8 @@ export class Gate {
     // Connect to the iframe.
     const connection = connectToChild({
       iframe: childFrame,
-      timeout: 5_000,
+      // TODO: Allow customizing the timeout
+      timeout: 15_000,
     });
 
     this.bridgeConnection = connection;

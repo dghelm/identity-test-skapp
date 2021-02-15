@@ -24,7 +24,16 @@ console.log(`Bridge skylink: ${bridgeSkylink}`);
 
 export const gate = new Gate(bridgeSkylink);
 
-// Initialize the identity state.
+// Define button click functions.
+
+(window as any).bridgeRestart = bridgeRestart;
+(window as any).changeProvider = loadNewProvider;
+(window as any).loginLoaded = connectProvider;
+(window as any).loginLogout = disconnectProvider;
+(window as any).loginNotLoaded = loadNewProvider;
+(window as any).logout = disconnectProvider;
+
+// Start the identity component.
 
 (async () => {
   fetchStoredProvider();
@@ -35,12 +44,3 @@ export const gate = new Gate(bridgeSkylink);
     console.log(e);
   }
 });
-
-// Define button click functions.
-
-(window as any).bridgeRestart = bridgeRestart;
-(window as any).changeProvider = loadNewProvider;
-(window as any).loginLoaded = connectProvider;
-(window as any).loginLogout = disconnectProvider;
-(window as any).loginNotLoaded = loadNewProvider;
-(window as any).logout = disconnectProvider;
