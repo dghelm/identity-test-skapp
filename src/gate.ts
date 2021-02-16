@@ -1,5 +1,5 @@
-import { connectToChild } from "penpal";
-import { Connection } from "penpal/lib/types";
+import { ParentHandshake, WindowMessenger } from "post-me";
+import type { Connection } from "post-me";
 
 import { createIframe } from "./utils";
 
@@ -40,7 +40,7 @@ export class SkappInfo {
 }
 
 export class Gate {
-  bridgeConnection!: Connection;
+  bridgeConnection!: Promise<Connection>;
   bridgeInfo!: Promise<BridgeInfo>;
   bridgeUrl: string;
   providerInfo!: ProviderInfo;
@@ -79,18 +79,22 @@ export class Gate {
     //   );
     // }
 
-    return this.bridgeConnection.promise.then(async (child) => child.callInterface(method));
+    const connection = await this.bridgeConnection;
+    return connection.remoteHandle().call("callInterface", method);
   }
 
   // TODO: Verify return value from child has correct fields.
   async connectProvider(skappInfo: SkappInfo): Promise<ProviderInfo> {
-    const child = await this.bridgeConnection.promise;
-    const info = await child.connectProvider(skappInfo);
+    const connection = await this.bridgeConnection;
+    const info = await connection.remoteHandle().call("connectProvider", skappInfo);
 
     this.providerInfo = info;
     return info;
   }
 
+  /**
+   * Destroys the bridge by: 1. unloading the provider on the bridge, 2. closing the bridge connection, 3. closing the child iframe
+   */
   async destroyBridge(): Promise<void> {
     if (this.providerInfo.isProviderLoaded) {
       try {
@@ -102,64 +106,65 @@ export class Gate {
 
     this.providerInfo = emptyProviderInfo;
 
+    const connection = await this.bridgeConnection;
+    connection.close();
+
     // Close the child iframe.
     if (this.childFrame) {
       this.childFrame.parentNode!.removeChild(this.childFrame);
     }
-
-    return this.bridgeConnection.destroy();
   }
 
   async disconnectProvider(): Promise<ProviderInfo> {
-    return this.bridgeConnection.promise
-      .then(async (child) => child.disconnectProvider())
-      .then((info: ProviderInfo) => {
-        this.providerInfo = info;
-        return info;
-      });
+    const connection = await this.bridgeConnection;
+    const info = await connection.remoteHandle().call("disconnectProvider");
+
+    this.providerInfo = info;
+    return info;
   }
 
   async fetchStoredProvider(skappInfo: SkappInfo): Promise<ProviderInfo> {
-    return this.bridgeConnection.promise
-      .then(async (child) => child.fetchStoredProvider(skappInfo))
-      .then((info: ProviderInfo) => {
-        this.providerInfo = info;
-        return info;
-      });
+    const connection = await this.bridgeConnection;
+    const info = await connection.remoteHandle().call("fetchStoredProvider", skappInfo);
+
+    this.providerInfo = info;
+    return info;
   }
 
   async getBridgeInfo(): Promise<BridgeInfo> {
-    const child = await this.bridgeConnection.promise;
-    const info = await child.getBridgeInfo();
+    const connection = await this.bridgeConnection;
+    const info = await connection.remoteHandle().call("getBridgeInfo");
 
     return info;
   }
 
   async getProviderInfo(): Promise<ProviderInfo> {
-    const child = await this.bridgeConnection.promise;
-    const info = await child.getProviderInfo();
+    const connection = await this.bridgeConnection;
+    const info = await connection.remoteHandle().call("getProviderInfo");
 
     this.providerInfo = info;
     return info;
   }
 
   async loadNewProvider(skappInfo: SkappInfo): Promise<ProviderInfo> {
-    return this.bridgeConnection.promise
-      .then(async (child) => child.loadNewProvider(skappInfo))
-      .then((info: ProviderInfo) => {
-        this.providerInfo = info;
-        return info;
-      });
+    const connection = await this.bridgeConnection;
+    const info = await connection.remoteHandle().call("loadNewProvider", skappInfo);
+
+    this.providerInfo = info;
+    return info;
   }
 
+  /**
+   * Restarts the bridge by destroying it and starting it again.
+   */
   async restartBridge(): Promise<void> {
     await this.destroyBridge();
     this.start();
   }
 
   async unloadProvider(): Promise<ProviderInfo> {
-    const child = await this.bridgeConnection.promise;
-    const info = await child.unloadProvider();
+    const connection = await this.bridgeConnection;
+    const info = await connection.remoteHandle().call("unloadProvider");
 
     this.providerInfo = info;
     return info;
@@ -169,19 +174,21 @@ export class Gate {
   // Internal Gate Methods
   // =====================
 
-  start(): void {
+  protected start(): void {
     // Initialize state.
     this.providerInfo = emptyProviderInfo;
 
     // Create the iframe.
-    this.childFrame = createIframe(this.bridgeUrl);
+    this.childFrame = createIframe(this.bridgeUrl)
+    const childWindow = this.childFrame.contentWindow!;
 
     // Connect to the iframe.
-    this.bridgeConnection = connectToChild({
-      iframe: this.childFrame,
-      // TODO: Allow customizing the timeout
-      timeout: 15_000,
+    const messenger = new WindowMessenger({
+      localWindow: window,
+      remoteWindow: childWindow,
+      remoteOrigin: "*",
     });
+    this.bridgeConnection = ParentHandshake(messenger);
 
     this.bridgeInfo = this.getBridgeInfo();
   }

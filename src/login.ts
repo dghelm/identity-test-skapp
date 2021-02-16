@@ -64,10 +64,11 @@ export async function errorOk(): Promise<void> {
 export async function fetchStoredProvider(): Promise<void> {
   setUIStateFetching();
 
-  await gate.bridgeConnection.promise
-    .catch(() => {
-      setUIStateBridgeError();
-    });
+  try {
+    await gate.bridgeConnection;
+  } catch(error) {
+    setUIStateBridgeError();
+  };
 
   try {
     const info = await gate.fetchStoredProvider(skappInfo);
