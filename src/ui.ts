@@ -2,6 +2,7 @@ import type { ProviderInfo } from "./gate";
 
 const uiIdentityBridgeError = document.getElementById("identity-bridge-error");
 const uiIdentityConnected = document.getElementById("identity-connected");
+const uiIdentityError = document.getElementById("identity-error");
 const uiIdentityFetching = document.getElementById("identity-fetching");
 const uiIdentityLoaded = document.getElementById("identity-loaded");
 const uiIdentityNotLoaded = document.getElementById("identity-not-loaded");
@@ -24,7 +25,7 @@ export function deactivateUI() {
  * Set the UI state to indicate that the bridge could not be loaded.
  */
 export function setUIStateBridgeError() {
-  setAllIdentityContainersInvisible();
+  setAllScreensInvisible();
   uiIdentityBridgeError!.style.display = "block";
 }
 
@@ -37,18 +38,24 @@ export function setUIStateConnected(providerInfo: ProviderInfo, identity: string
     throw new Error("logic bug");
   }
 
-  setAllIdentityContainersInvisible();
+  setAllScreensInvisible();
   uiIdentityConnected!.style.display = "block";
 
   document.getElementById("identity-connected-identity")!.textContent = identity;
   document.getElementById("identity-connected-provider")!.textContent = providerInfo.metadata.name;
 }
 
+export function setUIStateError(error: string): void {
+  setAllScreensInvisible();
+  uiIdentityError!.style.display = "block";
+  document.getElementById("identity-error-message")!.textContent = error;
+}
+
 /**
  *
  */
 export function setUIStateFetching() {
-  setAllIdentityContainersInvisible();
+  setAllScreensInvisible();
   uiIdentityFetching!.style.display = "block";
 }
 
@@ -60,7 +67,7 @@ export function setUIStateLoaded(providerInfo: ProviderInfo) {
     throw new Error("logic bug");
   }
 
-  setAllIdentityContainersInvisible();
+  setAllScreensInvisible();
   uiIdentityLoaded!.style.display = "block";
 
   document.getElementById("identity-loaded-provider")!.textContent = providerInfo.metadata.name;
@@ -70,16 +77,17 @@ export function setUIStateLoaded(providerInfo: ProviderInfo) {
  *
  */
 export function setUIStateNotLoaded() {
-  setAllIdentityContainersInvisible();
+  setAllScreensInvisible();
   uiIdentityNotLoaded!.style.display = "block";
 }
 
 /**
  *
  */
-function setAllIdentityContainersInvisible() {
+function setAllScreensInvisible() {
   uiIdentityBridgeError!.style.display = "none";
   uiIdentityConnected!.style.display = "none";
+  uiIdentityError!.style.display = "none";
   uiIdentityFetching!.style.display = "none";
   uiIdentityLoaded!.style.display = "none";
   uiIdentityNotLoaded!.style.display = "none";

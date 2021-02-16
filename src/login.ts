@@ -6,6 +6,7 @@ import {
   deactivateUI,
   setUIStateBridgeError,
   setUIStateConnected,
+  setUIStateError,
   setUIStateFetching,
   setUIStateLoaded,
   setUIStateNotLoaded,
@@ -14,6 +15,7 @@ import {
 import { ProviderInfo } from "./gate";
 
 export async function bridgeRestart(): Promise<void> {
+  // Don't await here on purpose.
   gate.restartBridge();
   return fetchStoredProvider();
 }
@@ -24,10 +26,14 @@ export async function bridgeRestart(): Promise<void> {
 export async function connectProvider(): Promise<void> {
   deactivateUI();
 
-  return gate
-    .connectProvider(skappInfo)
-    .then(async (info) => changeSkappState(info))
-    .then(() => activateUI());
+  try {
+    const info = await gate.connectProvider(skappInfo);
+    await changeSkappState(info);
+  } catch (error) {
+    setSkappErrorState(error);
+  }
+
+  activateUI();
 }
 
 /**
@@ -36,10 +42,20 @@ export async function connectProvider(): Promise<void> {
 export async function disconnectProvider(): Promise<void> {
   deactivateUI();
 
-  return gate
-    .disconnectProvider()
-    .then(async (info) => changeSkappState(info))
-    .then(() => activateUI());
+  try {
+    const info = await gate.disconnectProvider();
+    await changeSkappState(info);
+  } catch (error) {
+    // Could not disconnect the provider. Forcefully unload it.
+    await gate.unloadProvider();
+    setSkappErrorState(error);
+  }
+
+  activateUI();
+}
+
+export async function errorOk(): Promise<void> {
+  await changeSkappState(gate.providerInfo);
 }
 
 /**
@@ -49,17 +65,16 @@ export async function fetchStoredProvider(): Promise<void> {
   setUIStateFetching();
 
   await gate.bridgeConnection.promise
-    .catch((error) => {
+    .catch(() => {
       setUIStateBridgeError();
-      console.log(error);
     });
 
-  // TODO: remove, testing fetching screen
-  await new Promise(resolve => setTimeout(resolve, 1000));
-
-  return gate
-    .fetchStoredProvider(skappInfo)
-    .then(async (info) => changeSkappState(info))
+  try {
+    const info = await gate.fetchStoredProvider(skappInfo);
+    await changeSkappState(info);
+  } catch (error) {
+    setSkappErrorState(error);
+  }
 }
 
 /**
@@ -68,10 +83,14 @@ export async function fetchStoredProvider(): Promise<void> {
 export async function loadNewProvider(): Promise<void> {
   deactivateUI();
 
-  return gate
-    .loadNewProvider(skappInfo)
-    .then(async (info) => changeSkappState(info))
-    .then(() => activateUI());
+  try {
+    const info = await gate.loadNewProvider(skappInfo);
+    await changeSkappState(info);
+  } catch (error) {
+    setSkappErrorState(error);
+  }
+
+  activateUI();
 }
 
 /**
@@ -93,9 +112,8 @@ async function changeSkappState(providerInfo: ProviderInfo): Promise<void> {
 
         setUIStateConnected(providerInfo, identity);
       } catch (error) {
-        console.log(error);
-        // TODO: Cleanup connection status.
-        setUIStateLoaded(providerInfo);
+        // Disconnect the provider as it couldn't fulfil the identity interface. This will set the UI state to "Loaded".
+        await gate.disconnectProvider();
       }
     } else {
       setUIStateLoaded(providerInfo);
@@ -103,4 +121,8 @@ async function changeSkappState(providerInfo: ProviderInfo): Promise<void> {
   } else {
     setUIStateNotLoaded();
   }
+}
+
+function setSkappErrorState(error: string): void {
+  setUIStateError(error);
 }

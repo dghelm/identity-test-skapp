@@ -5,6 +5,11 @@ import { createIframe } from "./utils";
 
 type Interface = Record<string, Array<string>>;
 
+type BridgeInfo = {
+  minimumInterface: Interface;
+  relativeRouterUrl: string;
+}
+
 export type ProviderInfo = {
   providerInterface: Interface | null;
   isProviderConnected: boolean;
@@ -35,10 +40,12 @@ export class SkappInfo {
 }
 
 export class Gate {
+  bridgeConnection!: Connection;
+  bridgeInfo!: Promise<BridgeInfo>;
   bridgeUrl: string;
   providerInfo!: ProviderInfo;
 
-  bridgeConnection!: Connection;
+  protected childFrame?: HTMLIFrameElement;
 
   // ===========
   // Constructor
@@ -77,20 +84,29 @@ export class Gate {
 
   // TODO: Verify return value from child has correct fields.
   async connectProvider(skappInfo: SkappInfo): Promise<ProviderInfo> {
-    return this.bridgeConnection.promise
-      .then(async (child) => child.connectProvider(skappInfo))
-      .then((info: ProviderInfo) => {
-        this.providerInfo = info;
-        return info;
-      });
+    const child = await this.bridgeConnection.promise;
+    const info = await child.connectProvider(skappInfo);
+
+    this.providerInfo = info;
+    return info;
   }
 
   async destroyBridge(): Promise<void> {
-    // TODO: Close the child iframe?
     if (this.providerInfo.isProviderLoaded) {
-      await this.unloadProvider();
+      try {
+        await this.unloadProvider();
+      } catch (error) {
+        console.log(error);
+      }
     }
+
     this.providerInfo = emptyProviderInfo;
+
+    // Close the child iframe.
+    if (this.childFrame) {
+      this.childFrame.parentNode!.removeChild(this.childFrame);
+    }
+
     return this.bridgeConnection.destroy();
   }
 
@@ -112,13 +128,19 @@ export class Gate {
       });
   }
 
+  async getBridgeInfo(): Promise<BridgeInfo> {
+    const child = await this.bridgeConnection.promise;
+    const info = await child.getBridgeInfo();
+
+    return info;
+  }
+
   async getProviderInfo(): Promise<ProviderInfo> {
-    return this.bridgeConnection.promise
-      .then(async (child) => child.getProviderInfo())
-      .then((info: ProviderInfo) => {
-        this.providerInfo = info;
-        return info;
-      });
+    const child = await this.bridgeConnection.promise;
+    const info = await child.getProviderInfo();
+
+    this.providerInfo = info;
+    return info;
   }
 
   async loadNewProvider(skappInfo: SkappInfo): Promise<ProviderInfo> {
@@ -135,8 +157,12 @@ export class Gate {
     this.start();
   }
 
-  async unloadProvider(): Promise<void> {
-    return this.bridgeConnection.promise.then(async (child) => child.unloadProvider());
+  async unloadProvider(): Promise<ProviderInfo> {
+    const child = await this.bridgeConnection.promise;
+    const info = await child.unloadProvider();
+
+    this.providerInfo = info;
+    return info;
   }
 
   // =====================
@@ -148,15 +174,15 @@ export class Gate {
     this.providerInfo = emptyProviderInfo;
 
     // Create the iframe.
-    const childFrame = createIframe(this.bridgeUrl);
+    this.childFrame = createIframe(this.bridgeUrl);
 
     // Connect to the iframe.
-    const connection = connectToChild({
-      iframe: childFrame,
+    this.bridgeConnection = connectToChild({
+      iframe: this.childFrame,
       // TODO: Allow customizing the timeout
       timeout: 15_000,
     });
 
-    this.bridgeConnection = connection;
+    this.bridgeInfo = this.getBridgeInfo();
   }
 }

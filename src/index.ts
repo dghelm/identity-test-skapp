@@ -1,17 +1,19 @@
 // TODO: Enable full eslints.
 
 import { SkynetClient } from "skynet-js";
+import { dev, skappName } from "./consts";
 
 // TODO: Should the gate be in skynet-js?
 import { Gate, SkappInfo } from "./gate";
-import { bridgeRestart, connectProvider, disconnectProvider, fetchStoredProvider, loadNewProvider } from "./login";
+import { bridgeRestart, connectProvider, disconnectProvider, errorOk, fetchStoredProvider, loadNewProvider } from "./login";
+import { setUIStateFetching } from "./ui";
 
-export let bridgeSkylink = `
-_AmgU7AqhQ0uzQ_s-fyhgXYKEBB_2aTp_51ShXL0gBRv0Q
-`;
+// ==============
+// Initialization
+// ==============
 
-const skappName = "identity-test-skapp";
-const dev = true;
+// Set the initial UI state.
+setUIStateFetching();
 
 // TODO: Should include a session token as well, so that other skapps can't impersonate this one.
 export const skappInfo = new SkappInfo(skappName);
@@ -19,21 +21,29 @@ export const skappInfo = new SkappInfo(skappName);
 const client = dev ? new SkynetClient("https://siasky.net") : new SkynetClient();
 
 // Get the base32 bridge skylink.
+export let bridgeSkylink = `
+_AA5KGApv7MdeQoi2HT22Dm7rN0Nj_sO284Xu1tqxD2Eyw
+`;
 bridgeSkylink = client.getSkylinkUrl(bridgeSkylink, { subdomain: true });
 console.log(`Bridge skylink: ${bridgeSkylink}`);
 
 export const gate = new Gate(bridgeSkylink);
 
-// Define button click functions.
+// ==========================
+// Define button click events
+// ==========================
 
 (window as any).bridgeRestart = bridgeRestart;
 (window as any).changeProvider = loadNewProvider;
+(window as any).errorOk = errorOk;
 (window as any).loginLoaded = connectProvider;
 (window as any).loginLogout = disconnectProvider;
 (window as any).loginNotLoaded = loadNewProvider;
 (window as any).logout = disconnectProvider;
 
-// Start the identity component.
+// ===============
+// START EXECUTION
+// ===============
 
 (async () => {
   fetchStoredProvider();
