@@ -12,6 +12,7 @@ export function createIframe(name: string, srcUrl: string): HTMLIFrameElement {
   childFrame.style.display = "none";
 
   // Set sandbox permissions.
+  // TODO: Enable sandboxing?
   // childFrame.sandbox.add("allow-same-origin");
   // childFrame.sandbox.add("allow-scripts");
 

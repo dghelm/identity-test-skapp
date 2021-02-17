@@ -222,7 +222,7 @@ export class Gate {
 
     // Wait for result.
     const result: string = await new Promise((resolve) => {
-      remoteHandle.addEventListener("result", (payload) => resolve(payload));
+      remoteHandle.addEventListener("result", (payload: string) => resolve(payload));
     });
 
     // Close the connection.
