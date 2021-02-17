@@ -1,13 +1,19 @@
 import { ParentHandshake, WindowMessenger } from "post-me";
 import type { Connection } from "post-me";
+import { SkynetClient } from "skynet-js";
+import urljoin from "url-join";
 
-import { createIframe } from "./utils";
+import { createIframe, popupCenter } from "./utils";
+import { handshakeAttemptsInterval, handshakeMaxAttempts } from "./consts";
 
 type Interface = Record<string, Array<string>>;
 
 type BridgeInfo = {
   minimumInterface: Interface;
   relativeRouterUrl: string;
+  routerName: string;
+  routerW: number;
+  routerH: number;
 }
 
 export type ProviderInfo = {
@@ -46,17 +52,20 @@ export class Gate {
   providerInfo!: ProviderInfo;
 
   protected childFrame?: HTMLIFrameElement;
+  protected client!: SkynetClient;
 
   // ===========
   // Constructor
   // ===========
 
-  constructor(bridgeUrl: string) {
+  constructor(client: SkynetClient, bridgeUrl: string) {
     if (typeof Storage == "undefined") {
       throw new Error("Browser does not support web storage");
     }
 
     this.bridgeUrl = bridgeUrl;
+    this.client = client;
+
     this.start();
   }
 
@@ -147,6 +156,15 @@ export class Gate {
   }
 
   async loadNewProvider(skappInfo: SkappInfo): Promise<ProviderInfo> {
+    const result = await this.launchRouter();
+    if (result === "closed") {
+      // User closed the router. Don't show error message screen, just silently return the current provider info without changes.
+      return this.providerInfo;
+    } else if (result !== "success") {
+      throw new Error(result);
+    }
+
+    // TODO: Wait for bridge to receive provider URL?
     const connection = await this.bridgeConnection;
     const info = await connection.remoteHandle().call("loadNewProvider", skappInfo);
 
@@ -174,12 +192,51 @@ export class Gate {
   // Internal Gate Methods
   // =====================
 
+  // TODO: should check periodically if window is still open.
+  /**
+   * Creates window with router and waits for a response.
+   */
+  protected async launchRouter(): Promise<string> {
+    // Set the router URL.
+    const bridgeInfo = await this.bridgeInfo;
+    const relativeRouterUrl = bridgeInfo.relativeRouterUrl;
+    const routerUrl = urljoin(this.bridgeUrl, relativeRouterUrl);
+
+    // Open the router.
+    const routerWindow = popupCenter(routerUrl, bridgeInfo.routerName, bridgeInfo.routerW, bridgeInfo.routerH);
+
+    // Establish a connection with the router.
+    const messenger = new WindowMessenger({
+      localWindow: window,
+      remoteWindow: routerWindow,
+      remoteOrigin: "*",
+    });
+    const routerConnection = await ParentHandshake(messenger, {}, handshakeMaxAttempts, handshakeAttemptsInterval);
+    const remoteHandle = routerConnection.remoteHandle();
+
+    // Send the bridge iframe name to the router so it knows where to send the provider URL.
+    if (!this.childFrame) {
+      throw new Error("Bridge iframe not found");
+    }
+    remoteHandle.call("setFrameName", this.bridgeUrl);
+
+    // Wait for result.
+    const result: string = await new Promise((resolve) => {
+      remoteHandle.addEventListener("result", (payload) => resolve(payload));
+    });
+
+    // Close the connection.
+    routerConnection.close();
+
+    return result;
+  }
+
   protected start(): void {
     // Initialize state.
     this.providerInfo = emptyProviderInfo;
 
     // Create the iframe.
-    this.childFrame = createIframe(this.bridgeUrl)
+    this.childFrame = createIframe(this.bridgeUrl, this.bridgeUrl)
     const childWindow = this.childFrame.contentWindow!;
 
     // Connect to the iframe.
@@ -188,7 +245,7 @@ export class Gate {
       remoteWindow: childWindow,
       remoteOrigin: "*",
     });
-    this.bridgeConnection = ParentHandshake(messenger);
+    this.bridgeConnection = ParentHandshake(messenger, {}, handshakeMaxAttempts, handshakeAttemptsInterval);
 
     this.bridgeInfo = this.getBridgeInfo();
   }

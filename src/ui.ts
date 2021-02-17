@@ -45,10 +45,17 @@ export function setUIStateConnected(providerInfo: ProviderInfo, identity: string
   document.getElementById("identity-connected-provider")!.textContent = providerInfo.metadata.name;
 }
 
-export function setUIStateError(error: string): void {
+export function setUIStateError(error: Error): void {
+  let message = error.message;
+  const prefix = "Error: ";
+  if (message.startsWith(prefix)) {
+    message = message.slice(prefix.length);
+  }
+  console.log(error.stack);
+
   setAllScreensInvisible();
   uiIdentityError!.style.display = "block";
-  document.getElementById("identity-error-message")!.textContent = error;
+  document.getElementById("identity-error-message")!.textContent = message;
 }
 
 /**

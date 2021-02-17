@@ -124,6 +124,11 @@ async function changeSkappState(providerInfo: ProviderInfo): Promise<void> {
   }
 }
 
-function setSkappErrorState(error: string): void {
-  setUIStateError(error);
+function setSkappErrorState(error: Error): void {
+  if (error.message === "Error: Handshake failed, reached maximum number of attempts") {
+    // We can't keep going so restart the bridge.
+    setUIStateBridgeError();
+  } else {
+    setUIStateError(error);
+  }
 }

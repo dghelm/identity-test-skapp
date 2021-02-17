@@ -43,6 +43,7 @@
   },
   "devDependencies": {
     "@types/node-forge": "^0.9.7",
+    "@types/url-join": "^4.0.0",
     "@typescript-eslint/eslint-plugin": "^4.3.0",
     "@typescript-eslint/parser": "^4.3.0",
     "eslint": "^7.11.0",
@@ -59,6 +60,7 @@
   },
   "dependencies": {
     "post-me": "^0.4.4",
-    "skynet-js": "^3.0.0"
+    "skynet-js": "^3.0.0",
+    "url-join": "^4.0.1"
   }
 }
