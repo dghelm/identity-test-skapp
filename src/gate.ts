@@ -8,7 +8,7 @@ import { handshakeAttemptsInterval, handshakeMaxAttempts } from "./consts";
 
 type Interface = Record<string, Array<string>>;
 
-type BridgeInfo = {
+type BridgeMetadata = {
   minimumInterface: Interface;
   relativeRouterUrl: string;
   routerName: string;
@@ -16,14 +16,14 @@ type BridgeInfo = {
   routerH: number;
 }
 
-export type ProviderInfo = {
+export type ProviderStatus = {
   providerInterface: Interface | null;
   isProviderConnected: boolean;
   isProviderLoaded: boolean;
   metadata: ProviderMetadata | null;
 };
 
-const emptyProviderInfo = {
+const emptyProviderStatus = {
   providerInterface: null,
   isProviderConnected: false,
   isProviderLoaded: false,
@@ -33,6 +33,7 @@ const emptyProviderInfo = {
 type ProviderMetadata = {
   name: string;
   domain: string;
+  relativeConnectUrl: string;
 };
 
 export class SkappInfo {
@@ -47,9 +48,9 @@ export class SkappInfo {
 
 export class Gate {
   bridgeConnection!: Promise<Connection>;
-  bridgeInfo!: Promise<BridgeInfo>;
+  bridgeMetadata!: Promise<BridgeMetadata>;
   bridgeUrl: string;
-  providerInfo!: ProviderInfo;
+  providerStatus!: ProviderStatus;
 
   protected childFrame?: HTMLIFrameElement;
   protected client!: SkynetClient;
@@ -74,17 +75,17 @@ export class Gate {
   // ===============
 
   async callInterface(method: string): Promise<unknown> {
-    if (!this.providerInfo.isProviderConnected) {
+    if (!this.providerStatus.isProviderConnected) {
       throw new Error("Provider not connected, cannot access interface");
     }
-    if (!this.providerInfo.providerInterface) {
+    if (!this.providerStatus.providerInterface) {
       throw new Error("Provider interface not present despite being connected. Possible logic bug");
     }
 
     // TODO: This check doesn't work.
-    // if (method in this.providerInfo.providerInterface) {
+    // if (method in this.providerStatus.providerInterface) {
     //   throw new Error(
-    //     `Unsupported method for this provider interface. Method: '${method}', Interface: ${this.providerInfo.providerInterface}`
+    //     `Unsupported method for this provider interface. Method: '${method}', Interface: ${this.providerStatus.providerInterface}`
     //   );
     // }
 
@@ -93,11 +94,11 @@ export class Gate {
   }
 
   // TODO: Verify return value from child has correct fields.
-  async connectProvider(skappInfo: SkappInfo): Promise<ProviderInfo> {
+  async connectProvider(skappInfo: SkappInfo): Promise<ProviderStatus> {
     const connection = await this.bridgeConnection;
     const info = await connection.remoteHandle().call("connectProvider", skappInfo);
 
-    this.providerInfo = info;
+    this.providerStatus = info;
     return info;
   }
 
@@ -105,7 +106,7 @@ export class Gate {
    * Destroys the bridge by: 1. unloading the provider on the bridge, 2. closing the bridge connection, 3. closing the child iframe
    */
   async destroyBridge(): Promise<void> {
-    if (this.providerInfo.isProviderLoaded) {
+    if (this.providerStatus.isProviderLoaded) {
       try {
         await this.unloadProvider();
       } catch (error) {
@@ -113,7 +114,7 @@ export class Gate {
       }
     }
 
-    this.providerInfo = emptyProviderInfo;
+    this.providerStatus = emptyProviderStatus;
 
     const connection = await this.bridgeConnection;
     connection.close();
@@ -124,42 +125,42 @@ export class Gate {
     }
   }
 
-  async disconnectProvider(): Promise<ProviderInfo> {
+  async disconnectProvider(): Promise<ProviderStatus> {
     const connection = await this.bridgeConnection;
     const info = await connection.remoteHandle().call("disconnectProvider");
 
-    this.providerInfo = info;
+    this.providerStatus = info;
     return info;
   }
 
-  async fetchStoredProvider(skappInfo: SkappInfo): Promise<ProviderInfo> {
+  async fetchStoredProvider(skappInfo: SkappInfo): Promise<ProviderStatus> {
     const connection = await this.bridgeConnection;
     const info = await connection.remoteHandle().call("fetchStoredProvider", skappInfo);
 
-    this.providerInfo = info;
+    this.providerStatus = info;
     return info;
   }
 
-  async getBridgeInfo(): Promise<BridgeInfo> {
+  async getBridgeMetadata(): Promise<BridgeMetadata> {
     const connection = await this.bridgeConnection;
-    const info = await connection.remoteHandle().call("getBridgeInfo");
+    const info = await connection.remoteHandle().call("getBridgeMetadata");
 
     return info;
   }
 
-  async getProviderInfo(): Promise<ProviderInfo> {
+  async getProviderStatus(): Promise<ProviderStatus> {
     const connection = await this.bridgeConnection;
-    const info = await connection.remoteHandle().call("getProviderInfo");
+    const info = await connection.remoteHandle().call("getProviderStatus");
 
-    this.providerInfo = info;
+    this.providerStatus = info;
     return info;
   }
 
-  async loadNewProvider(skappInfo: SkappInfo): Promise<ProviderInfo> {
+  async loadNewProvider(skappInfo: SkappInfo): Promise<ProviderStatus> {
     const result = await this.launchRouter();
     if (result === "closed") {
       // User closed the router. Don't show error message screen, just silently return the current provider info without changes.
-      return this.providerInfo;
+      return this.providerStatus;
     } else if (result !== "success") {
       throw new Error(result);
     }
@@ -168,7 +169,7 @@ export class Gate {
     const connection = await this.bridgeConnection;
     const info = await connection.remoteHandle().call("loadNewProvider", skappInfo);
 
-    this.providerInfo = info;
+    this.providerStatus = info;
     return info;
   }
 
@@ -180,11 +181,11 @@ export class Gate {
     this.start();
   }
 
-  async unloadProvider(): Promise<ProviderInfo> {
+  async unloadProvider(): Promise<ProviderStatus> {
     const connection = await this.bridgeConnection;
     const info = await connection.remoteHandle().call("unloadProvider");
 
-    this.providerInfo = info;
+    this.providerStatus = info;
     return info;
   }
 
@@ -198,12 +199,12 @@ export class Gate {
    */
   protected async launchRouter(): Promise<string> {
     // Set the router URL.
-    const bridgeInfo = await this.bridgeInfo;
-    const relativeRouterUrl = bridgeInfo.relativeRouterUrl;
+    const bridgeMetadata = await this.bridgeMetadata;
+    const relativeRouterUrl = bridgeMetadata.relativeRouterUrl;
     const routerUrl = urljoin(this.bridgeUrl, relativeRouterUrl);
 
     // Open the router.
-    const routerWindow = popupCenter(routerUrl, bridgeInfo.routerName, bridgeInfo.routerW, bridgeInfo.routerH);
+    const routerWindow = popupCenter(routerUrl, bridgeMetadata.routerName, bridgeMetadata.routerW, bridgeMetadata.routerH);
 
     // Establish a connection with the router.
     const messenger = new WindowMessenger({
@@ -233,7 +234,7 @@ export class Gate {
 
   protected start(): void {
     // Initialize state.
-    this.providerInfo = emptyProviderInfo;
+    this.providerStatus = emptyProviderStatus;
 
     // Create the iframe.
     this.childFrame = createIframe(this.bridgeUrl, this.bridgeUrl)
@@ -247,6 +248,6 @@ export class Gate {
     });
     this.bridgeConnection = ParentHandshake(messenger, {}, handshakeMaxAttempts, handshakeAttemptsInterval);
 
-    this.bridgeInfo = this.getBridgeInfo();
+    this.bridgeMetadata = this.getBridgeMetadata();
   }
 }

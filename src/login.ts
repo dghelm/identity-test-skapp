@@ -12,7 +12,7 @@ import {
   setUIStateNotLoaded,
 } from "./ui";
 
-import { ProviderInfo } from "./gate";
+import { ProviderStatus } from "./gate";
 
 export async function bridgeRestart(): Promise<void> {
   // Don't await here on purpose.
@@ -55,7 +55,7 @@ export async function disconnectProvider(): Promise<void> {
 }
 
 export async function errorOk(): Promise<void> {
-  await changeSkappState(gate.providerInfo);
+  await changeSkappState(gate.providerStatus);
 }
 
 /**
@@ -97,10 +97,10 @@ export async function loadNewProvider(): Promise<void> {
 /**
  * Changes the skapp state to either not-loaded, loaded, or connected, depending on the state of the provider.
  *
- * @param providerInfo - The provider info.
+ * @param providerStatus - The provider info.
  */
-async function changeSkappState(providerInfo: ProviderInfo): Promise<void> {
-  const { isProviderConnected, isProviderLoaded } = providerInfo;
+async function changeSkappState(providerStatus: ProviderStatus): Promise<void> {
+  const { isProviderConnected, isProviderLoaded } = providerStatus;
 
   if (isProviderLoaded) {
     if (isProviderConnected) {
@@ -111,13 +111,13 @@ async function changeSkappState(providerInfo: ProviderInfo): Promise<void> {
           throw new Error("returned identity is not a string");
         }
 
-        setUIStateConnected(providerInfo, identity);
+        setUIStateConnected(providerStatus, identity);
       } catch (error) {
         // Disconnect the provider as it couldn't fulfil the identity interface. This will set the UI state to "Loaded".
         await gate.disconnectProvider();
       }
     } else {
-      setUIStateLoaded(providerInfo);
+      setUIStateLoaded(providerStatus);
     }
   } else {
     setUIStateNotLoaded();

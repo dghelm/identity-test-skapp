@@ -1,4 +1,4 @@
-import type { ProviderInfo } from "./gate";
+import type { ProviderStatus } from "./gate";
 
 const uiIdentityBridgeError = document.getElementById("identity-bridge-error");
 const uiIdentityConnected = document.getElementById("identity-connected");
@@ -30,11 +30,11 @@ export function setUIStateBridgeError() {
 }
 
 /**
- * @param providerInfo
+ * @param providerStatus
  * @param identity
  */
-export function setUIStateConnected(providerInfo: ProviderInfo, identity: string) {
-  if (!providerInfo.metadata) {
+export function setUIStateConnected(providerStatus: ProviderStatus, identity: string) {
+  if (!providerStatus.metadata) {
     throw new Error("logic bug");
   }
 
@@ -42,7 +42,7 @@ export function setUIStateConnected(providerInfo: ProviderInfo, identity: string
   uiIdentityConnected!.style.display = "block";
 
   document.getElementById("identity-connected-identity")!.textContent = identity;
-  document.getElementById("identity-connected-provider")!.textContent = providerInfo.metadata.name;
+  document.getElementById("identity-connected-provider")!.textContent = providerStatus.metadata.name;
 }
 
 export function setUIStateError(error: Error): void {
@@ -67,17 +67,17 @@ export function setUIStateFetching() {
 }
 
 /**
- * @param providerInfo
+ * @param providerStatus
  */
-export function setUIStateLoaded(providerInfo: ProviderInfo) {
-  if (!providerInfo.metadata) {
+export function setUIStateLoaded(providerStatus: ProviderStatus) {
+  if (!providerStatus.metadata) {
     throw new Error("logic bug");
   }
 
   setAllScreensInvisible();
   uiIdentityLoaded!.style.display = "block";
 
-  document.getElementById("identity-loaded-provider")!.textContent = providerInfo.metadata.name;
+  document.getElementById("identity-loaded-provider")!.textContent = providerStatus.metadata.name;
 }
 
 /**
