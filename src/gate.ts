@@ -3,13 +3,14 @@ import type { Connection } from "post-me";
 import { SkynetClient } from "skynet-js";
 import urljoin from "url-join";
 
-import { createIframe, popupCenter } from "./utils";
+import { createIframe, ensureUrl, popupCenter } from "./utils";
 import { handshakeAttemptsInterval, handshakeMaxAttempts } from "./consts";
 
 type Interface = Record<string, Array<string>>;
 
 type BridgeMetadata = {
   minimumInterface: Interface;
+
   relativeRouterUrl: string;
   routerName: string;
   routerW: number;
@@ -32,18 +33,17 @@ const emptyProviderStatus = {
 
 type ProviderMetadata = {
   name: string;
-  domain: string;
-  relativeConnectUrl: string;
+  url: string;
+
+  relativeConnectorPath: string;
+  connectorName: string;
+  connectorW: number;
+  connectorH: number;
 };
 
-export class SkappInfo {
+export type SkappInfo = {
   name: string;
   domain: string;
-
-  constructor(name: string) {
-    this.name = name;
-    this.domain = location.hostname;
-  }
 }
 
 export class Gate {
@@ -93,13 +93,37 @@ export class Gate {
     return connection.remoteHandle().call("callInterface", method);
   }
 
-  // TODO: Verify return value from child has correct fields.
   async connectProvider(skappInfo: SkappInfo): Promise<ProviderStatus> {
     const connection = await this.bridgeConnection;
-    const info = await connection.remoteHandle().call("connectProvider", skappInfo);
 
-    this.providerStatus = info;
-    return info;
+    // Register an event listener for connectionComplete.
+
+    const promise: Promise<ProviderStatus> = new Promise((resolve) => {
+      const remoteHandle = connection.remoteHandle();
+      const handleEvent = (status: ProviderStatus) => {
+        remoteHandle.removeEventListener("connectionComplete", handleEvent);
+
+        resolve(status);
+      };
+
+      remoteHandle.addEventListener('connectionComplete', handleEvent);
+    });
+
+    // Launch the connector.
+
+    const result = await this.launchConnector(skappInfo);
+    if (result === "closed") {
+      // User closed the connector. Don't show error message screen, just silently return the current provider info without changes.
+      return this.providerStatus;
+    } else if (result !== "success") {
+      throw new Error(result);
+    }
+
+    // Wait for provider to receive connection info.
+
+    this.providerStatus = await promise;
+
+    return this.providerStatus;
   }
 
   /**
@@ -165,7 +189,7 @@ export class Gate {
       throw new Error(result);
     }
 
-    // TODO: Wait for bridge to receive provider URL?
+    // TODO: We should wait on a one-time emitted "providerReceived" event here.
     const connection = await this.bridgeConnection;
     const info = await connection.remoteHandle().call("loadNewProvider", skappInfo);
 
@@ -195,13 +219,52 @@ export class Gate {
 
   // TODO: should check periodically if window is still open.
   /**
+   * Creates window with connector and waits for a response.
+   */
+  protected async launchConnector(skappInfo: SkappInfo): Promise<string> {
+    // Set the connector URL.
+    const metadata = this.providerStatus.metadata;
+    if (!metadata) {
+      throw new Error("Provider not loaded, possible logic error");
+    }
+    const providerUrl = ensureUrl(metadata.url);
+    let connectorUrl = urljoin(providerUrl, metadata.relativeConnectorPath);
+    // Send the iframe name to the connector so the iframe knows where to send the provider URL.
+    connectorUrl = `${connectorUrl}?bridgeFrameName=${this.bridgeUrl}&skappName=${skappInfo.name}&skappDomain=${skappInfo.domain}`;
+
+    // Wait for result.
+    const promise: Promise<string> = new Promise((resolve, reject) => {
+      // Register a message listener.
+      const handleMessage = (event: MessageEvent) => {
+        if (event.origin !== providerUrl)
+          return;
+
+        window.removeEventListener("message", handleMessage);
+
+        // Resolve or reject the promise.
+        if (!event.data) {
+          reject("Connector did not send response");
+        }
+        resolve(event.data);
+      };
+
+      window.addEventListener("message", handleMessage);
+    });
+
+    // Open the connector.
+    const connectorWindow = popupCenter(connectorUrl, metadata.connectorName, metadata.connectorW, metadata.connectorH);
+
+    return promise;
+  }
+
+  // TODO: should check periodically if window is still open.
+  /**
    * Creates window with router and waits for a response.
    */
   protected async launchRouter(): Promise<string> {
     // Set the router URL.
     const bridgeMetadata = await this.bridgeMetadata;
-    const relativeRouterUrl = bridgeMetadata.relativeRouterUrl;
-    const routerUrl = urljoin(this.bridgeUrl, relativeRouterUrl);
+    const routerUrl = urljoin(this.bridgeUrl, bridgeMetadata.relativeRouterUrl);
 
     // Open the router.
     const routerWindow = popupCenter(routerUrl, bridgeMetadata.routerName, bridgeMetadata.routerW, bridgeMetadata.routerH);
@@ -237,7 +300,8 @@ export class Gate {
     this.providerStatus = emptyProviderStatus;
 
     // Create the iframe.
-    this.childFrame = createIframe(this.bridgeUrl, this.bridgeUrl)
+    const bridgeUrl = ensureUrl(this.bridgeUrl);
+    this.childFrame = createIframe(bridgeUrl, bridgeUrl)
     const childWindow = this.childFrame.contentWindow!;
 
     // Connect to the iframe.

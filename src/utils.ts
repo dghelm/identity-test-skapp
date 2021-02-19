@@ -1,10 +1,8 @@
 /**
  * Creates an invisible iframe with the given src and adds it to the page.
  */
-export function createIframe(name: string, srcUrl: string): HTMLIFrameElement {
-  if (!srcUrl.startsWith("https://")) {
-    srcUrl = `https://${srcUrl}`;
-  }
+export function createIframe(srcUrl: string, name: string): HTMLIFrameElement {
+  srcUrl = ensureUrl(srcUrl);
 
   const childFrame = document.createElement("iframe")!;
   childFrame.src = srcUrl;
@@ -20,10 +18,23 @@ export function createIframe(name: string, srcUrl: string): HTMLIFrameElement {
   return childFrame;
 }
 
+export function ensurePrefix(s: string, prefix: string): string {
+  if (!s.startsWith(prefix)) {
+    s = `${prefix}${s}`;
+  }
+  return s;
+}
+
+export function ensureUrl(url: string): string {
+  return ensurePrefix(url, "https://");
+}
+
 /**
  * From SkyID.
  */
 export function popupCenter(url: string, title: string, w: number, h: number): Window {
+  url = ensureUrl(url);
+
   // Fixes dual-screen position                             Most browsers      Firefox
   const dualScreenLeft = window.screenLeft !== undefined ? window.screenLeft : window.screenX
   const dualScreenTop = window.screenTop !== undefined ? window.screenTop : window.screenY

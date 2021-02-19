@@ -5,7 +5,7 @@ import { dev, skappName } from "./consts";
 
 // TODO: Should the gate be in skynet-js?
 import { Gate, SkappInfo } from "./gate";
-import { bridgeRestart, connectProvider, disconnectProvider, errorOk, fetchStoredProvider, loadNewProvider } from "./login";
+import { bridgeRestart, connectProvider, disconnectProvider, errorOk, fetchStoredProvider, loadNewProvider } from "./actions";
 import { setUIStateFetching } from "./ui";
 
 // ==============
@@ -16,13 +16,13 @@ import { setUIStateFetching } from "./ui";
 setUIStateFetching();
 
 // TODO: Should include a session token as well, so that other skapps can't impersonate this one.
-export const skappInfo = new SkappInfo(skappName);
+export const skappInfo = { name: skappName, domain: location.hostname };
 
 const client = dev ? new SkynetClient("https://siasky.net") : new SkynetClient();
 
 // Get the base32 bridge skylink.
 export let bridgeSkylink = `
-_AC1aeNNlAjb3PXuaPQVyluvbc5mrvxq6JPsIdecjSLo0g
+_A3kFUF3xxFM6A_xGUTtqLiDSWLZUqxKcRkHQJFDuNhH5w
 `;
 bridgeSkylink = client.getSkylinkUrl(bridgeSkylink, { subdomain: true });
 console.log(`Bridge skylink: ${bridgeSkylink}`);
