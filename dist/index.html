@@ -64,11 +64,6 @@
           text-align: center;
       }
 
-      .loading {
-          background: gray !important;
-          cursor: not-allowed;
-      }
-
       .identity-connected-identity {
           font-weight: bold;
       }
@@ -161,8 +156,8 @@
         </div>
 
         <div id="identity-not-loaded" class="identity-screen center">
-          <button id="button-login-not-loaded" class="btn" onclick="window.loginNotLoaded()">
-            Login
+          <button id="button-select-provider" class="btn" onclick="window.selectProvider()">
+            Select Provider
           </button>
           <div>
             No Provider Selected
@@ -170,7 +165,7 @@
         </div>
 
         <div id="identity-loaded" class="identity-screen center">
-          <button id="button-login-loaded" class="btn" onclick="window.loginLoaded()">
+          <button id="button-login" class="btn" onclick="window.login()">
             Login
           </button>
           <button id="button-change-provider" class="btn" onclick="window.changeProvider()">

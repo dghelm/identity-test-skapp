@@ -4,7 +4,7 @@ import { SkynetClient } from "skynet-js";
 import { dev, skappName } from "./consts";
 
 // TODO: Should the gate be in skynet-js?
-import { Gate, SkappInfo } from "./gate";
+import { Gate } from "./gate";
 import { bridgeRestart, connectProvider, disconnectProvider, errorOk, fetchStoredProvider, loadNewProvider } from "./actions";
 import { setUIStateFetching } from "./ui";
 
@@ -22,7 +22,7 @@ const client = dev ? new SkynetClient("https://siasky.net") : new SkynetClient()
 
 // Get the base32 bridge skylink.
 export let bridgeSkylink = `
-_A3kFUF3xxFM6A_xGUTtqLiDSWLZUqxKcRkHQJFDuNhH5w
+_A1y_yZmoYmLNKW1H07Fl9ictuEPoxVCruDGtRGpFkgZrg
 `;
 bridgeSkylink = client.getSkylinkUrl(bridgeSkylink, { subdomain: true });
 console.log(`Bridge skylink: ${bridgeSkylink}`);
@@ -37,10 +37,10 @@ export const gate = new Gate(client, bridgeSkylink);
 
 (window as any).errorOk = errorOk;
 
-(window as any).loginNotLoaded = loadNewProvider;
+(window as any).selectProvider = loadNewProvider;
 
 (window as any).changeProvider = loadNewProvider;
-(window as any).loginLoaded = connectProvider;
+(window as any).login = connectProvider;
 
 (window as any).logout = disconnectProvider;
 
