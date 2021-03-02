@@ -15,7 +15,7 @@ type BridgeMetadata = {
   routerName: string;
   routerW: number;
   routerH: number;
-}
+};
 
 export type ProviderStatus = {
   providerInterface: Interface | null;
@@ -44,7 +44,7 @@ type ProviderMetadata = {
 export type SkappInfo = {
   name: string;
   domain: string;
-}
+};
 
 export class Gate {
   bridgeConnection!: Promise<Connection>;
@@ -106,7 +106,7 @@ export class Gate {
         resolve(status);
       };
 
-      remoteHandle.addEventListener('connectionComplete', handleEvent);
+      remoteHandle.addEventListener("connectionComplete", handleEvent);
     });
 
     // Launch the connector.
@@ -236,8 +236,7 @@ export class Gate {
     const promise: Promise<string> = new Promise((resolve, reject) => {
       // Register a message listener.
       const handleMessage = (event: MessageEvent) => {
-        if (event.origin !== providerUrl)
-          return;
+        if (event.origin !== providerUrl) return;
 
         window.removeEventListener("message", handleMessage);
 
@@ -267,7 +266,12 @@ export class Gate {
     const routerUrl = urljoin(this.bridgeUrl, bridgeMetadata.relativeRouterUrl);
 
     // Open the router.
-    const routerWindow = popupCenter(routerUrl, bridgeMetadata.routerName, bridgeMetadata.routerW, bridgeMetadata.routerH);
+    const routerWindow = popupCenter(
+      routerUrl,
+      bridgeMetadata.routerName,
+      bridgeMetadata.routerW,
+      bridgeMetadata.routerH
+    );
 
     // Establish a connection with the router.
     const messenger = new WindowMessenger({
@@ -301,7 +305,7 @@ export class Gate {
 
     // Create the iframe.
     const bridgeUrl = ensureUrl(this.bridgeUrl);
-    this.childFrame = createIframe(bridgeUrl, bridgeUrl)
+    this.childFrame = createIframe(bridgeUrl, bridgeUrl);
     const childWindow = this.childFrame.contentWindow!;
 
     // Connect to the iframe.

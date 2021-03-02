@@ -2,11 +2,11 @@ const path = require("path");
 
 module.exports = {
   entry: "./src/index.ts",
-  mode: 'development',
+  mode: "development",
 
   devtool: "inline-source-map",
   devServer: {
-    contentBase: './dist',
+    contentBase: "./dist",
   },
   module: {
     rules: [

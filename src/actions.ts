@@ -66,9 +66,9 @@ export async function fetchStoredProvider(): Promise<void> {
 
   try {
     await gate.bridgeConnection;
-  } catch(error) {
+  } catch (error) {
     setUIStateBridgeError();
-  };
+  }
 
   try {
     const info = await gate.fetchStoredProvider(skappInfo);

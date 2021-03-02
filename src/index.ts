@@ -5,7 +5,14 @@ import { dev, skappName } from "./consts";
 
 // TODO: Should the gate be in skynet-js?
 import { Gate } from "./gate";
-import { bridgeRestart, connectProvider, disconnectProvider, errorOk, fetchStoredProvider, loadNewProvider } from "./actions";
+import {
+  bridgeRestart,
+  connectProvider,
+  disconnectProvider,
+  errorOk,
+  fetchStoredProvider,
+  loadNewProvider,
+} from "./actions";
 import { setUIStateFetching } from "./ui";
 
 // ==============
