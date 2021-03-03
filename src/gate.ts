@@ -189,7 +189,7 @@ export class Gate {
       throw new Error(result);
     }
 
-    // TODO: We should wait on a one-time emitted "providerReceived" event here.
+    // TODO: We should wait on a one-time emitted "providerReceived" event here, like we do on "connectionComplete";
     const connection = await this.bridgeConnection;
     const info = await connection.remoteHandle().call("loadNewProvider", skappInfo);
 
@@ -229,8 +229,8 @@ export class Gate {
     }
     const providerUrl = ensureUrl(metadata.url);
     let connectorUrl = urljoin(providerUrl, metadata.relativeConnectorPath);
-    // Send the iframe name to the connector so the iframe knows where to send the provider URL.
-    connectorUrl = `${connectorUrl}?bridgeFrameName=${this.bridgeUrl}&skappName=${skappInfo.name}&skappDomain=${skappInfo.domain}`;
+    // Send the iframe name to the connector so the iframe knows where to send the login info.
+    connectorUrl = `${connectorUrl}?skappName=${skappInfo.name}&skappDomain=${skappInfo.domain}`;
 
     // Wait for result.
     const promise: Promise<string> = new Promise((resolve, reject) => {
@@ -265,6 +265,25 @@ export class Gate {
     const bridgeMetadata = await this.bridgeMetadata;
     const routerUrl = urljoin(this.bridgeUrl, bridgeMetadata.relativeRouterUrl);
 
+    // Wait for result.
+    const promise: Promise<string> = new Promise((resolve, reject) => {
+      // Register a message listener.
+      const handleMessage = (event: MessageEvent) => {
+        console.log(event);
+        if (event.origin !== this.bridgeUrl) return;
+
+        window.removeEventListener("message", handleMessage);
+
+        // Resolve or reject the promise.
+        if (!event.data) {
+          reject("Router did not send response");
+        }
+        resolve(event.data);
+      };
+
+      window.addEventListener("message", handleMessage);
+    });
+
     // Open the router.
     const routerWindow = popupCenter(
       routerUrl,
@@ -273,30 +292,7 @@ export class Gate {
       bridgeMetadata.routerH
     );
 
-    // Establish a connection with the router.
-    const messenger = new WindowMessenger({
-      localWindow: window,
-      remoteWindow: routerWindow,
-      remoteOrigin: "*",
-    });
-    const routerConnection = await ParentHandshake(messenger, {}, handshakeMaxAttempts, handshakeAttemptsInterval);
-    const remoteHandle = routerConnection.remoteHandle();
-
-    // Send the bridge iframe name to the router so it knows where to send the provider URL.
-    if (!this.childFrame) {
-      throw new Error("Bridge iframe not found");
-    }
-    remoteHandle.call("setFrameName", this.bridgeUrl);
-
-    // Wait for result.
-    const result: string = await new Promise((resolve) => {
-      remoteHandle.addEventListener("result", (payload: string) => resolve(payload));
-    });
-
-    // Close the connection.
-    routerConnection.close();
-
-    return result;
+    return promise;
   }
 
   protected start(): void {

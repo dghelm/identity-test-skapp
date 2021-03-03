@@ -51,7 +51,6 @@ export function setUIStateError(error: Error): void {
   if (message.startsWith(prefix)) {
     message = message.slice(prefix.length);
   }
-  console.log(error.stack);
 
   setAllScreensInvisible();
   uiIdentityError!.style.display = "block";

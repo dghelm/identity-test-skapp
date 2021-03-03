@@ -29,10 +29,9 @@ const client = dev ? new SkynetClient("https://siasky.net") : new SkynetClient()
 
 // Get the base32 bridge skylink.
 export let bridgeSkylink = `
-_A2b66qnahwfL51mQSDpk0wg_3P0xcs0RigZQdPWI6ZHeQ
+_ALgFDoi9-FS7JBdXTpvne779WcG7JLLiwZHtz43m1-gyw
 `;
 bridgeSkylink = client.getSkylinkUrl(bridgeSkylink, { subdomain: true });
-console.log(`Bridge skylink: ${bridgeSkylink}`);
 
 export const gate = new Gate(client, bridgeSkylink);
 
