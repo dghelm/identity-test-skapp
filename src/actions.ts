@@ -1,15 +1,14 @@
 // TODO: Error-checking on bridge calls.
 
-import { gate, skappInfo } from "./index";
+import { skappInfo } from "./index";
 import {
   activateUI,
   deactivateUI,
   setUIStateBridgeError,
-  setUIStateConnected,
   setUIStateError,
   setUIStateFetching,
-  setUIStateLoaded,
-  setUIStateNotLoaded,
+  setUIStateLoggedIn,
+  setUIStateNotLoggedIn,
 } from "./ui";
 
 import { ProviderStatus } from "./gate";
@@ -23,12 +22,24 @@ export async function bridgeRestart(): Promise<void> {
 /**
  * Connects to the currently loaded provider.
  */
-export async function connectProvider(): Promise<void> {
+export async function loginProvider(): Promise<void> {
   deactivateUI();
 
   try {
-    const info = await gate.connectProvider(skappInfo);
-    await changeSkappState(info);
+    const status = await gate.connectProvider(skappInfo);
+    let identity;
+    try {
+      identity = await gate.callInterface("identity");
+      if (typeof identity !== "string") {
+        throw new Error("returned identity is not a string");
+      }
+
+      setUIStateLoggedIn(status, identity);
+    } catch (error) {
+      // TODO: necessary?
+      // Disconnect the provider as it couldn't fulfil the identity interface.
+      await gate.disconnectProvider();
+    }
   } catch (error) {
     setSkappErrorState(error);
   }
@@ -39,13 +50,14 @@ export async function connectProvider(): Promise<void> {
 /**
  * Disconnects from the currently connected provider.
  */
-export async function disconnectProvider(): Promise<void> {
+export async function logout(): Promise<void> {
   deactivateUI();
 
   try {
-    const info = await gate.disconnectProvider();
-    await changeSkappState(info);
+    const info = await gate.logout();
+    setUIStateNotLoggedIn();
   } catch (error) {
+    // TODO: necessary?
     // Could not disconnect the provider. Forcefully unload it.
     await gate.unloadProvider();
     setSkappErrorState(error);
@@ -61,7 +73,7 @@ export async function errorOk(): Promise<void> {
 /**
  * Fetches the stored provider and if found, tries to connect.
  */
-export async function fetchStoredProvider(): Promise<void> {
+export async function loginSilent(): Promise<void> {
   setUIStateFetching();
 
   try {
@@ -79,22 +91,6 @@ export async function fetchStoredProvider(): Promise<void> {
 }
 
 /**
- * Loads a new provider, asking the router for the provider first.
- */
-export async function loadNewProvider(): Promise<void> {
-  deactivateUI();
-
-  try {
-    const info = await gate.loadNewProvider(skappInfo);
-    await changeSkappState(info);
-  } catch (error) {
-    setSkappErrorState(error);
-  }
-
-  activateUI();
-}
-
-/**
  * Changes the skapp state to either not-loaded, loaded, or connected, depending on the state of the provider.
  *
  * @param providerStatus - The provider info.
@@ -104,18 +100,6 @@ async function changeSkappState(providerStatus: ProviderStatus): Promise<void> {
 
   if (isProviderLoaded) {
     if (isProviderConnected) {
-      let identity;
-      try {
-        identity = await gate.callInterface("identity");
-        if (typeof identity !== "string") {
-          throw new Error("returned identity is not a string");
-        }
-
-        setUIStateConnected(providerStatus, identity);
-      } catch (error) {
-        // Disconnect the provider as it couldn't fulfil the identity interface. This will set the UI state to "Loaded".
-        await gate.disconnectProvider();
-      }
     } else {
       setUIStateLoaded(providerStatus);
     }

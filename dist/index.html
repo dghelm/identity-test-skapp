@@ -155,39 +155,23 @@
           </div>
         </div>
 
-        <div id="identity-not-loaded" class="identity-screen center">
-          <button id="button-select-provider" class="btn" onclick="window.selectProvider()">
-            Select Provider
-          </button>
-          <div>
-            No Provider Selected
-          </div>
-        </div>
-
-        <div id="identity-loaded" class="identity-screen center">
+        <div id="identity-not-logged-in" class="identity-screen center">
           <button id="button-login" class="btn" onclick="window.login()">
             Login
           </button>
-          <button id="button-change-provider" class="btn" onclick="window.changeProvider()">
-            Change Provider
-          </button>
-          <div>
-            Provider:
-            <span id="identity-loaded-provider"></span>
-          </div>
         </div>
 
-        <div id="identity-connected" class="identity-screen center">
+        <div id="identity-logged-in" class="identity-screen center">
           <div>
             Logged in as
-            <span id="identity-connected-identity"></span>
+            <span id="identity-logged-in-identity"></span>
           </div>
           <button id="button-logout" class="btn" onclick="window.logout()">
             Logout
           </button>
           <div>
             Provider:
-            <span id="identity-connected-provider"></span>
+            <span id="identity-logged-in-provider"></span>
           </div>
         </div>
       </div>

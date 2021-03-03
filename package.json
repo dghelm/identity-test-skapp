@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "private": true,
+  "env": "web",
   "browserslist": [
     "defaults",
     "not IE 11",
@@ -11,7 +12,7 @@
   "scripts": {
     "build": "npx webpack",
     "lint:eslint": "eslint --ext .ts src",
-    "lint:tsc": "tsc",
+    "lint:tsc": "tsc --noemit",
     "start": "webpack serve --open",
     "test": "echo \"Error: no test specified\" && exit 1",
     "watch": "webpack --watch"
