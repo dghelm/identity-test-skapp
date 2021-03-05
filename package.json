@@ -21,8 +21,8 @@
     "type": "git",
     "url": "git+https://github.com/m-cat/identity-test-skapp.git"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Marcin Swieczkowski",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/m-cat/identity-test-skapp/issues"
   },
@@ -43,7 +43,6 @@
     ]
   },
   "devDependencies": {
-    "@types/node-forge": "^0.9.7",
     "@types/url-join": "^4.0.0",
     "@typescript-eslint/eslint-plugin": "^4.3.0",
     "@typescript-eslint/parser": "^4.3.0",

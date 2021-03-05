@@ -1,5 +1,3 @@
-import type { ProviderStatus } from "./gate";
-
 const uiIdentityBridgeError = document.getElementById("identity-bridge-error");
 const uiIdentityError = document.getElementById("identity-error");
 const uiIdentityFetching = document.getElementById("identity-fetching");
@@ -32,16 +30,11 @@ export function setUIStateBridgeError() {
  * @param providerStatus
  * @param identity
  */
-export function setUIStateLoggedIn(providerStatus: ProviderStatus, identity: string) {
-  if (!providerStatus.metadata) {
-    throw new Error("Provider metadata not found");
-  }
-
+export function setUIStateLoggedIn(identity: string) {
   setAllScreensInvisible();
   uiIdentityLoggedIn!.style.display = "block";
 
   document.getElementById("identity-logged-in-identity")!.textContent = identity;
-  document.getElementById("identity-logged-in-provider")!.textContent = providerStatus.metadata.name;
 }
 
 /**
@@ -49,18 +42,6 @@ export function setUIStateLoggedIn(providerStatus: ProviderStatus, identity: str
 export function setUIStateNotLoggedIn() {
   setAllScreensInvisible();
   uiIdentityNotLoggedIn!.style.display = "block";
-}
-
-export function setUIStateError(error: Error): void {
-  let message = error.message;
-  const prefix = "Error: ";
-  if (message.startsWith(prefix)) {
-    message = message.slice(prefix.length);
-  }
-
-  setAllScreensInvisible();
-  uiIdentityError!.style.display = "block";
-  document.getElementById("identity-error-message")!.textContent = message;
 }
 
 /**

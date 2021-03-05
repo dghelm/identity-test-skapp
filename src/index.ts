@@ -1,42 +1,82 @@
 // TODO: Enable full eslints.
 
-import { SkynetClient } from "skynet-js";
+import { Interface, SkynetClient } from "skynet-js";
+import { SkappInfo } from "skynet-interface-utils";
+
 import { dev, skappName } from "./consts";
 
-// TODO: Should the gate be in skynet-js?
 import {
   bridgeRestart,
-  errorOk,
+  loginPopup,
+  logout,
 } from "./actions";
-import { setUIStateFetching, setUIStateLoggedIn, setUIStateNotLoggedIn } from "./ui";
-
-// ==============
-// Initialization
-// ==============
-
-// Set the initial UI state.
-setUIStateFetching();
+import { setUIStateBridgeError, setUIStateFetching, setUIStateLoggedIn, setUIStateNotLoggedIn } from "./ui";
 
 // TODO: Should include a session token as well, so that other skapps can't impersonate this one.
-export const skappInfo = { name: skappName, domain: location.hostname };
+export const skappInfo = new SkappInfo(skappName, location.hostname);
 
-const client = dev ? new SkynetClient("https://siasky.net") : new SkynetClient();
+const mySkyInterface = {
+  name: "MySky",
+  version: "0.0.1",
+  methods: {
+    identity: {
+      parameters: [],
+      returnType: "string",
+    },
+    getJSON: {
+      parameters: [
+        {
+          name: "dataKey",
+          type: "string",
+        },
+        {
+          name: "customOptions",
+          type: "object",
+          optional: true,
+        }
+      ],
+      returnType: "object",
+    },
+  },
+};
 
-// Get the base32 bridge skylink.
-export let bridgeSkylink = `
+export let bridgeSkylink: string;
+export let client = dev ? new SkynetClient("https://siasky.net") : new SkynetClient();
+export let mySky: Interface;
+
+export const startSkapp = (async () => {
+  // ==============
+  // Initialization
+  // ==============
+
+  // Set the initial UI state.
+  setUIStateFetching();
+
+  // Get the base32 bridge skylink.
+  bridgeSkylink = `
 _ALgFDoi9-FS7JBdXTpvne779WcG7JLLiwZHtz43m1-gyw
 `;
-bridgeSkylink = client.getSkylinkUrl(bridgeSkylink, { subdomain: true });
+  bridgeSkylink = client.getSkylinkUrl(bridgeSkylink, { subdomain: true });
 
-// Initialize the gate.
-client.gate.initialize(bridgeSkylink);
+  // Initialize the gate.
+  await client.gate.initialize(skappInfo, bridgeSkylink);
+  mySky = await client.gate.loadInterface(mySkyInterface);
+
+  // Try to login silently.
+  try {
+    await mySky.loginSilent();
+    const identity: string = await mySky.identity();
+    setUIStateLoggedIn(identity);
+  } catch {
+    setUIStateNotLoggedIn();
+  }
+});
 
 // ==========================
 // Define button click events
 // ==========================
 
 (window as any).bridgeRestart = bridgeRestart;
-(window as any).errorOk = errorOk;
 
 (window as any).login = loginPopup;
 (window as any).logout = logout;
@@ -45,18 +85,11 @@ client.gate.initialize(bridgeSkylink);
 // START EXECUTION
 // ===============
 
-(async () => {
-
-  try {
-    const { providerStatus, identity } = loginSilent();
-    setUIStateLoggedIn(providerStatus, identity);
-  } catch {
-    setUIStateNotLoggedIn();
-  }
-})().catch((e) => {
+startSkapp().catch((e) => {
   if (dev) {
     alert(e);
   } else {
     console.log(e);
   }
+  setUIStateBridgeError();
 });
