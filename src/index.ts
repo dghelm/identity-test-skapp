@@ -54,7 +54,7 @@ export const startSkapp = (async () => {
 
   // Get the base32 bridge skylink.
   bridgeSkylink = `
-_ALgFDoi9-FS7JBdXTpvne779WcG7JLLiwZHtz43m1-gyw
+_ALYsClkNBT6xKXescnuTC2uIhKCR5VcmV7MnVAKS8Xwiw
 `;
   bridgeSkylink = client.getSkylinkUrl(bridgeSkylink, { subdomain: true });
 
@@ -67,7 +67,7 @@ _ALgFDoi9-FS7JBdXTpvne779WcG7JLLiwZHtz43m1-gyw
     await mySky.loginSilent();
     const identity: string = await mySky.identity();
     setUIStateLoggedIn(identity);
-  } catch {
+  } catch (err) {
     setUIStateNotLoggedIn();
   }
 });
@@ -87,8 +87,6 @@ _ALgFDoi9-FS7JBdXTpvne779WcG7JLLiwZHtz43m1-gyw
 
 startSkapp().catch((e) => {
   if (dev) {
-    alert(e);
-  } else {
     console.log(e);
   }
   setUIStateBridgeError();

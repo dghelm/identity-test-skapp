@@ -13,8 +13,6 @@ export async function bridgeRestart(): Promise<void> {
   await client.gate.destroy();
   return startSkapp().catch((e) => {
     if (dev) {
-      alert(e);
-    } else {
       console.log(e);
     }
     setUIStateBridgeError();
@@ -26,9 +24,15 @@ export async function bridgeRestart(): Promise<void> {
 export async function loginPopup(): Promise<void> {
   deactivateUI();
 
-  await mySky.loginPopup();
-  const identity: string = await mySky.identity();
-  setUIStateLoggedIn(identity);
+  try {
+    await mySky.loginPopup();
+    const identity: string = await mySky.identity();
+    setUIStateLoggedIn(identity);
+  } catch (err) {
+    if (dev) {
+      console.log(err);
+    }
+  }
 
   activateUI();
 }
@@ -39,8 +43,14 @@ export async function loginPopup(): Promise<void> {
 export async function logout(): Promise<void> {
   deactivateUI();
 
-  await mySky.logout();
-  setUIStateNotLoggedIn();
+  try {
+    await mySky.logout();
+    setUIStateNotLoggedIn();
+  } catch (err) {
+    if (dev) {
+      console.log(err);
+    }
+  }
 
   activateUI();
 }
