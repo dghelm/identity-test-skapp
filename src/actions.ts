@@ -1,16 +1,13 @@
-import {
-  activateUI,
-  deactivateUI,
-  setUIStateBridgeError,
-  setUIStateLoggedIn,
-  setUIStateNotLoggedIn,
-} from "./ui";
+import { activateUI, deactivateUI, setUIStateBridgeError, setUIStateLoggedIn, setUIStateNotLoggedIn } from "./ui";
 
 import { client, mySky, startSkapp } from ".";
-import { dev } from "./consts";
+import { defaultProviderMySky, dev } from "./consts";
 
+/**
+ *
+ */
 export async function bridgeRestart(): Promise<void> {
-  await client.gate.destroy();
+  await client.bridge.destroy();
   return startSkapp().catch((e) => {
     if (dev) {
       console.log(e);
@@ -25,7 +22,7 @@ export async function loginPopup(): Promise<void> {
   deactivateUI();
 
   try {
-    await mySky.loginPopup();
+    await mySky.loginPopup({ defaultProviders: [defaultProviderMySky] });
     const identity: string = await mySky.identity();
     setUIStateLoggedIn(identity);
   } catch (err) {
