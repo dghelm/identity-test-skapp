@@ -7,7 +7,7 @@ import { defaultProviderMySky, dev } from "./consts";
  *
  */
 export async function bridgeRestart(): Promise<void> {
-  await client.bridge.destroy();
+  await client.destroyBridge();
   return startSkapp().catch((e) => {
     if (dev) {
       console.log(e);
@@ -22,7 +22,7 @@ export async function loginPopup(): Promise<void> {
   deactivateUI();
 
   try {
-    await mySky.loginPopup({ defaultProviders: [defaultProviderMySky] });
+    await mySky.loginPopup({ providers: [defaultProviderMySky] });
     const identity: string = await mySky.identity();
     setUIStateLoggedIn(identity);
   } catch (err) {
